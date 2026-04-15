@@ -49,7 +49,7 @@ class WikiKnowledgeBase:
             return
 
         # 加载所有类别的 Wiki 页面
-        for subdir in ["entities", "concepts", "constraints", "summaries", "comparisons", "synthesis"]:
+        for subdir in ["entities", "concepts", "summaries", "comparisons", "synthesis"]:
             subpath = self.wiki_dir / subdir
             if subpath.exists():
                 for md_file in subpath.glob("*.md"):
