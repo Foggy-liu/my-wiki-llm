@@ -273,16 +273,85 @@ class IngestPipeline:
         return contradictions
 
     def _fix_cross_references(self, summary_title: str, mentioned: List[str]) -> List[str]:
-        """维护交叉引用"""
+        """
+        维护交叉引用
+
+        核心逻辑：
+        1. 对于每个被引用的页面，检查是否存在
+        2. 如果不存在，自动创建占位实体页面（LLM 未来可补充内容）
+        3. 如果存在，确保 summary 页面被引用
+        """
         fixes = []
+        now = datetime.now().isoformat()
 
         for mentioned_title in mentioned:
+            # 跳过系统页面
+            if mentioned_title in ["index.md", "log.md", "lifecycle.md"]:
+                continue
+
             mentioned_page = self.wiki_kb.get_page(mentioned_title)
-            if mentioned_page:
-                # 确保 summary 页面被提及页面引用
+
+            if mentioned_page is None:
+                # 页面不存在，自动创建占位实体页面
+                from artifact_chain.src.wiki_kb import WikiEntry
+
+                entry = WikiEntry(
+                    title=mentioned_title,
+                    category="entities",
+                    content=f"# {mentioned_title}\n\n> 此页面由 Ingest 自动创建，内容待 LLM 补充。\n\n## 待补充\n\n- 相关描述\n- 关键特征\n- 与其他条目的关系\n",
+                    tags=["auto-created", "placeholder"],
+                    sources=[],
+                    description=f"占位实体: {mentioned_title}",
+                    confidence=0.1,
+                    status="active",
+                    aliases=[],
+                    created=now,
+                    updated=now,
+                    last_accessed=now,
+                    access_count=0
+                )
+
+                # 保存文件
+                entity_dir = self.wiki_kb.wiki_dir / "entities"
+                entity_dir.mkdir(parents=True, exist_ok=True)
+                file_path = entity_dir / f"{mentioned_title}.md"
+
+                frontmatter_lines = [
+                    "---",
+                    f'title: "{entry.title}"',
+                    f'category: {entry.category}',
+                    f'tags: [{", ".join(entry.tags)}]',
+                    f'sources: []',
+                    f'description: "{entry.description}"',
+                    f'confidence: {entry.confidence}',
+                    f'status: {entry.status}',
+                    f'aliases: []',
+                    f'created: "{entry.created}"',
+                    f'updated: "{entry.updated}"',
+                    f'last_accessed: "{entry.last_accessed}"',
+                    f'access_count: {entry.access_count}',
+                    "---",
+                    "",
+                ]
+
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write("\n".join(frontmatter_lines))
+                    f.write(entry.content)
+
+                # 更新内存索引
+                self.wiki_kb.entries.append(entry)
+                self.wiki_kb._index[mentioned_title] = entry
+
+                # 更新 index.md
+                self._update_index(entry)
+
+                fixes.append(f"Auto-created placeholder: [[{mentioned_title}]]")
+
+            else:
+                # 页面存在，确保 summary 页面被引用
                 if f"[[{summary_title}]]" not in mentioned_page.content:
-                    # 更新提及页面，添加对 summary 的引用
                     mentioned_page.content += f"\n\n- [[{summary_title}]]"
+                    self.wiki_kb._save_entry(mentioned_page)
                     fixes.append(f"Added [[{summary_title}]] to [[{mentioned_title}]]")
 
         return fixes

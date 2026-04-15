@@ -1,7 +1,7 @@
 # LLM Wiki 知识库开发指南
 
 > 本文档整合了 LLM Wiki 的核心理论（llm-wiki.md）与实际示例项目（llm-wiki/）的最佳实践
-> **版本：v2.0** — 修正了 Query 操作的理解错误
+> **版本：v3.0** — 修正架构层数、index格式、补充tags/output规范
 
 ---
 
@@ -83,7 +83,7 @@ LLM 综合已有知识回答问题
 
 ## 三、架构详解
 
-### 3.1 四层架构
+### 3.1 五层架构
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -181,9 +181,9 @@ status: active | stale | archived # 可选（lifecycle.md 存在时必须有）
 
 ## Entities
 
-| Page | Confidence | Status | Updated | Description |
-|------|------------|--------|---------|-------------|
-| [[Obsidian]] | 0.70 | active | 2026-04-15 | Local markdown-based... |
+| Page | Summary | confidence | status |
+|------|---------|------------|--------|
+| [[Obsidian]] | Local markdown-based knowledge management tool | 0.70 | active |
 
 ## Concepts
 (same table format)
@@ -200,7 +200,8 @@ status: active | stale | archived # 可选（lifecycle.md 存在时必须有）
 
 **关键点：**
 - 使用**表格格式**（不是列表）
-- 必须包含 `Confidence` 和 `Status` 列
+- 必须包含 `Summary`、`confidence` 和 `status` 列
+- `Summary` 列填写页面的一句话描述
 - LLM 读取 index.md 来定位相关页面，而不是直接遍历所有文件
 
 ### 3.4 log.md 的正确格式
@@ -226,6 +227,50 @@ status: active | stale | archived # 可选（lifecycle.md 存在时必须有）
 - 每条记录以 `## [YYYY-MM-DD] <operation> | <target>` 格式开头
 - 用 `grep "^## \[" log.md | tail -5` 可以查看最近 5 条
 - 仅保留最近 30 天，更早的由 lint 归档
+
+### 3.5 tags.md 的正确格式（标签规范）
+
+每个页面标签由三个维度组合而成：
+
+**域名标签（技术/业务领域）：**
+```
+AI, software-engineering, testing, CI-CD, infrastructure, observability,
+frontend, backend, DevOps, architecture, programming-languages,
+knowledge-management, databases, middleware, distributed-systems,
+cloud-native, security, information-science
+```
+
+**类型标签（页面描述的事物的类型）：**
+```
+framework, tool, pattern, practice, standard, concept, person,
+project, methodology, comparative-analysis, synthesis
+```
+
+**成熟度标签（可选，仅在可明确判断时添加）：**
+```
+mature, emerging, experimental, deprecated
+```
+
+**规则：**
+- 每个页面至少需要 1 个域名标签 + 1 个类型标签
+- 成熟度标签可选
+- 标签使用小写英文，用连字符分隔
+- 优先复用现有标签，新增标签前先检查是否有可复用的同义词
+
+**示例：**
+```yaml
+tags: [AI, knowledge-management, tool]
+```
+
+### 3.6 命名规范
+
+| 类型 | 命名规则 | 示例 |
+|---|---|---|
+| Entity 页面 | 实体名称，中横线分隔 | `Obsidian.md` |
+| Concept 页面 | 概念名称 | `RAG.md` |
+| Summary 页面 | `raw-` + 源路径缩写 | `raw-articles-llm-wiki.md` |
+| Comparison 页面 | `A-vs-B-主题` | `LLM-Wiki-vs-RAG.md` |
+| Synthesis 页面 | 描述性分析主题 | `index-and-log-scalability-analysis.md` |
 
 ---
 
@@ -403,17 +448,56 @@ active ──→ stale ──→ archived
 8. 记录日志
 ```
 
+### 5.6 Output 交付物格式规范
+
+**目录结构：**
+```
+output/
+├── posts/           # 博客文章
+├── reports/         # 研究报告、技术调查报告
+├── slides/          # 演示文稿（Marp 格式）
+├── tutorials/       # 教程、可独立跟随的步骤指南
+└── newsletters/     # 周报、月报、知识简报
+```
+
+**Frontmatter 要求：**
+```yaml
+---
+title: 交付物标题
+type: post | report | slides | tutorial | newsletter
+audience: 目标受众描述
+created: YYYY-MM-DD
+status: draft | reviewed | published
+wiki_sources:
+  - "wiki/page-path"
+---
+```
+
+**格式要求：**
+| 类型 | 格式要求 |
+|------|---------|
+| post | 标准 Markdown，包含标题、摘要、正文、参考文献 |
+| report | 标准 Markdown，包含摘要、正文、结论、参考文献 |
+| slides | Marp 格式，`---` 分页，frontmatter 包含 `marp: true` |
+| tutorial | 清晰的步骤、完整的代码、可独立跟随 |
+| newsletter | 简洁的条目式结构，总结近期关键洞察 |
+
+**通用规则：**
+- 交付物必须**独立可读** — 不依赖 wiki 内部的 `[[wikilinks]]`
+- `[[wikilinks]]` → 标准 Markdown 链接或纯文本
+- 引用使用脚注或参考文献格式
+
 ---
 
 ## 六、在文物 IP 项目中的正确应用
 
-### 6.1 错误理解（我之前犯的）
+### 6.1 错误理解（常见误区）
 
 ```
-用户输入 → IntentParser（意图解析）→ 关键字匹配 Wiki → 返回结果
+用户输入 → 意图解析 → 关键字匹配 Wiki → 返回结果
 ```
 
-**问题：** 把 Wiki 当成普通数据库，用关键字查询
+**问题：** 把 Wiki 当成普通数据库，用关键字查询，丢失了 LLM 辅助的核心价值
 
 ### 6.2 正确理解
 
@@ -471,9 +555,11 @@ artifact_wiki/
 │       └── 青铜面具悬疑创作指南.md
 │
 └── output/                        # 输出层
-    ├── scripts/                  # 生成的脚本
-    ├── prompts/                  # 生成的视频 Prompt
-    └── reports/                  # 分析报告
+    ├── posts/                    # 博客文章
+    ├── reports/                  # 研究报告
+    ├── slides/                   # 演示文稿
+    ├── tutorials/                # 教程
+    └── newsletters/              # 知识简报
 ```
 
 ### 6.4 Wiki 页面示例（正确的格式）
@@ -484,7 +570,7 @@ artifact_wiki/
 ---
 title: 青铜面具
 aliases: [Bronze Mask, 三星堆面具]
-tags: [三星堆, 青铜器, 古蜀文明, 祭祀, 文物]
+tags: [knowledge-management, concept, mature]
 category: entities
 created: 2026-04-15
 updated: 2026-04-15
@@ -523,7 +609,7 @@ status: active
 - 可能用于与天神沟通的祭祀仪式
 - 纵目造型暗示超越人类的感知能力
 
-## 相关页面
+## Related Pages
 
 - [[三星堆遗址]] - 出土地点
 - [[古蜀祭祀文化]] - 相关文化背景
@@ -606,11 +692,11 @@ A: 普通文件夹只是存储文件，LLM Wiki 是 LLM 主动整理、归纳、
 
 ### Q: Wiki 内容会不会过时？
 
-A: 需要定期 Lint 检查，LLM 发现新资料和老内容冲突时会标记或更新。置信度系统会追踪哪些知识可能过时。
+A: 需要定期 Lint 检查，LLM 发现新资料和老内容冲突时会标记或更新。置信度系统（lifecycle）会追踪哪些知识可能过时，并自动衰减置信度。
 
 ### Q: 需要多少资料才能开始？
 
-A: 对于面试项目，3-5 个核心词条 + 一些原始资料就足够展示设计思路了。
+A: 3-5 个核心词条 + 一些原始资料就足够展示设计思路了。Wiki 是渐进式的，资料越多越丰富。
 
 ### Q: lifecycle.md 是必须的吗？
 
@@ -618,22 +704,26 @@ A: 不是，它是可插拔的增强功能。删除它不影响 Wiki 核心功�
 
 ### Q: 如何处理矛盾的信息？
 
-A: 在页面中显式标注矛盾，引用两个来源，让使用者自己判断置信度。
+A: 在页面中显式标注矛盾，引用两个来源，让使用者自己判断置信度。新材料与现有内容矛盾时，该页面置信度 −0.15。
 
 ### Q: Query 操作和普通搜索有什么区别？
 
-A: 关键区别在于 LLM 辅助。Query 时 LLM 先读 index.md 理解 Wiki 结构，然后决定读哪些页面，而不是简单的关键字匹配。这让 Wiki 查询更智能，能理解语义。
+A: 关键区别在于 LLM 辅助。Query 时 LLM 先读 index.md 理解 Wiki 结构，然后决定读哪些页面，而不是简单的关键字匹配。这让 Wiki 查询更智能，能理解语义，并综合多页面的知识回答。
+
+### Q: Embedding 向量检索在 LLM Wiki 中还有用吗？
+
+A: 有用，但应用方式不同。传统 RAG 在原始文档碎片上做向量检索；LLM Wiki 在整理好的结构化页面上做向量检索。小规模 Wiki（<100 页面）直接用 index.md 遍历就够用；大规模 Wiki（>100 页面）可用 qmd 等工具增强检索。
 
 ---
 
 ## 十、下一步行动
 
-1. ✅ 理解 LLM Wiki 核心理论（已修正 Query 理解）
-2. ⬜ 修正当前 Wiki 页面格式（添加 confidence、status、aliases）
-3. ⬜ 添加 log.md（当前缺失）
-4. ⬜ 添加 lifecycle.md（可选但推荐）
-5. ⬜ 修正 retriever.py 为 LLM 辅助查询（不再使用关键字匹配）
-6. ⬜ 测试完整流程
+1. ✅ 理解 LLM Wiki 核心理论（Query 是 LLM 辅助的，不是关键字匹配）
+2. ⬜ 构建项目的 Raw 层（放入原始资料）
+3. ⬜ 使用 Ingest 消化第一批材料
+4. ⬜ 体验 Query 操作
+5. ⬜ 定期 Lint 检查 Wiki 健康状态
+6. ⬜ 使用 Publish 生成第一个交付物
 
 ---
 

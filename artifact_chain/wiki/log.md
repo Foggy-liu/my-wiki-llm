@@ -44,3 +44,35 @@
 
 ## [2026-04-15] query | 青铜面具相关
 - Consulted: [[青铜面具]], [[raw-articles-三星堆综合研究]]
+
+## [2026-04-15] ingest | artifact_chain\raw\articles\长城历史沿革.md
+- Created: [[raw-articles-长城历史沿革]]
+- Updated: None
+
+## [2026-04-15] ingest | artifact_chain\raw\articles\长城历史沿革.md
+- Created: [[raw-articles-长城历史沿革]]
+- Updated: None
+
+## [2026-04-15] ingest | artifact_chain\raw\articles\长城历史沿革.md
+- Created: [[raw-articles-长城历史沿革]]
+- Updated: None
+
+## [2026-04-15] lint | Health Check
+- Issues: 13 | Fixed: 0
+- Lifecycle: Decay: 0 | Status changes: 0
+
+## [2026-04-15] lint | Health Check
+- Issues: 13 | Fixed: 0
+- Lifecycle: Decay: 0 | Status changes: 0
+
+## [2026-04-15] lint | Health Check
+- Issues: 4 | Fixed: 0
+- Lifecycle: Decay: 0 | Status changes: 0
+
+## [2026-04-15] ingest | artifact_chain\raw\articles\测试自动创建.md
+- Created: [[raw-articles-测试自动创建]]
+- Updated: None
+
+## [2026-04-15] lint | Health Check
+- Issues: 4 | Fixed: 0
+- Lifecycle: Decay: 0 | Status changes: 0
