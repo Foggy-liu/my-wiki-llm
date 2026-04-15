@@ -77,6 +77,7 @@ class Retriever:
                     all_results.append(r)
 
         # 3. 获取脚本结构相关页面（如果需要脚本）
+        script_page_added = False
         if intent.intent_type == "脚本":
             script_page = self.wiki_kb.get_page("短视频脚本结构")
             if script_page:
@@ -85,17 +86,20 @@ class Retriever:
                     score=0.85,
                     highlight=f"结构匹配: {script_page.title}"
                 ))
+                script_page_added = True
 
-        # 4. 去重（根据 title）
-        seen_titles = set()
-        unique_results = []
+        # 4. 去重（根据 title）- 保留最高分数的结果
+        title_to_result = {}
         for r in all_results:
-            if r.entry.title not in seen_titles:
-                seen_titles.add(r.entry.title)
-                unique_results.append(r)
+            if r.entry.title not in title_to_result or r.score > title_to_result[r.entry.title].score:
+                title_to_result[r.entry.title] = r
 
-        # 5. 按置信度排序
-        unique_results.sort(key=lambda x: x.entry.confidence, reverse=True)
+        unique_results = list(title_to_result.values())
+
+        # 5. 按分数排序（使用我们赋分的 score，而非 entry.confidence）
+        unique_results.sort(key=lambda x: x.score, reverse=True)
+
+        return unique_results[:self.top_k]
 
         return unique_results[:self.top_k]
 

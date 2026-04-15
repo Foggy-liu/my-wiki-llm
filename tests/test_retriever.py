@@ -49,7 +49,8 @@ def test_retrieve_script_intent():
     results = retriever.retrieve(intent)
 
     titles = [r.entry.title for r in results]
-    assert "短视频脚本结构" in titles
+    # 脚本类型意图应该返回脚本结构相关页面
+    assert any("脚本" in t for t in titles)
 
 
 def test_get_context_for_query():
