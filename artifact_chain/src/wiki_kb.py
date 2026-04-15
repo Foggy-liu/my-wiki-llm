@@ -18,6 +18,8 @@ class WikiEntry:
     aliases: List[str] = None
     created: str = ""
     updated: str = ""
+    last_accessed: str = ""  # ISO format datetime for lifecycle decay
+    access_count: int = 0  # number of times accessed, for promotion rules
 
     def __post_init__(self):
         if self.aliases is None:
@@ -46,7 +48,8 @@ class WikiKnowledgeBase:
         if not self.wiki_dir.exists():
             return
 
-        for subdir in ["entities", "concepts"]:
+        # 加载所有类别的 Wiki 页面
+        for subdir in ["entities", "concepts", "summaries", "comparisons", "synthesis"]:
             subpath = self.wiki_dir / subdir
             if subpath.exists():
                 for md_file in subpath.glob("*.md"):
@@ -136,6 +139,9 @@ class WikiKnowledgeBase:
         created = frontmatter.get("created", "")
         updated = frontmatter.get("updated", "")
         description = frontmatter.get("description", "")
+        last_accessed = frontmatter.get("last_accessed", "")
+        access_count_str = frontmatter.get("access_count", "0")
+        access_count = int(access_count_str) if access_count_str else 0
 
         return WikiEntry(
             title=frontmatter.get("title", file_path.stem),
@@ -148,7 +154,9 @@ class WikiKnowledgeBase:
             status=status,
             aliases=aliases,
             created=created,
-            updated=updated
+            updated=updated,
+            last_accessed=last_accessed,
+            access_count=access_count
         )
 
     def get_page(self, title: str) -> Optional[WikiEntry]:
@@ -253,3 +261,57 @@ class WikiKnowledgeBase:
             with open(log_path, "r", encoding="utf-8") as f:
                 return f.read()
         return ""
+
+    def update_access(self, title: str) -> None:
+        """
+        更新页面访问时间（用于 lifecycle 衰减计算）
+
+        Args:
+            title: 页面标题
+        """
+        entry = self._index.get(title)
+        if entry:
+            from datetime import datetime
+            entry.last_accessed = datetime.now().isoformat()
+            entry.access_count += 1
+            # Update the file on disk
+            self._save_entry(entry)
+
+    def append_log(self, log_entry: str) -> None:
+        """
+        追加操作日志到 wiki/log.md
+
+        Args:
+            log_entry: 日志条目（markdown 格式）
+        """
+        log_path = self.wiki_dir / "log.md"
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write("\n" + log_entry)
+
+    def _save_entry(self, entry: WikiEntry) -> None:
+        """保存 WikiEntry 到对应分类目录"""
+        category_dir = self.wiki_dir / entry.category
+        file_path = category_dir / f"{entry.title}.md"
+
+        # Build frontmatter
+        frontmatter_lines = [
+            "---",
+            f'title: "{entry.title}"',
+            f'category: {entry.category}',
+            f'tags: [{", ".join(entry.tags)}]',
+            f'sources: [{", ".join(entry.sources)}]',
+            f'description: "{entry.description}"',
+            f'confidence: {entry.confidence}',
+            f'status: {entry.status}',
+            f'aliases: [{", ".join(entry.aliases)}]',
+            f'created: "{entry.created}"',
+            f'updated: "{entry.updated}"',
+            f'last_accessed: "{entry.last_accessed}"',
+            f'access_count: {entry.access_count}',
+            "---",
+            "",
+        ]
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(frontmatter_lines))
+            f.write(entry.content)
