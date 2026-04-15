@@ -75,3 +75,45 @@ wiki/
 ├── comparisons/           # 对比分析
 └── synthesis/            # 综合洞察
 ```
+
+## Ingest 链路规则
+
+1. **自动创建缺失引用**
+   - Ingest 提取到 [[wikilink]] 时，如果页面不存在，自动创建占位实体页面
+   - 占位页面 confidence=0.1，标签包含 auto-created
+   - 不要留给人修补，不要依赖 Lint 事后发现
+
+2. **自动更新 index.md**
+   - Ingest 创建新页面后，必须同步更新 index.md 对应分类表格
+   - index.md 的 Last updated 时间戳同步更新
+
+3. **自动记录 log.md**
+   - Ingest/Query/Lint/Publish 四个操作都必须调用 append_log()
+   - 格式：`## [YYYY-MM-DD] ingest | file\n- Created: [[page]]\n- Updated: [[page]]`
+
+## Pipeline 操作通用模式
+
+每个 pipeline 操作必须遵循同一套流程：
+
+```
+操作执行
+    ↓
+更新 lifecycle（update_access）
+    ↓
+记录 log（append_log）
+    ↓
+返回结果
+```
+
+## WikiEntry 必须字段（扩展）
+
+```yaml
+last_accessed: ""      # ISO datetime，生命周期衰减用
+access_count: 0        # 访问次数，用于晋升规则
+```
+
+## Lint 职责边界
+
+- Lint 负责检测：孤立页面、矛盾、交叉引用完整性、生命周期衰减
+- Lint 不负责修复：修复是 Ingest 的职责
+- Error 级别问题应该在 Ingest 阶段就被消除
