@@ -59,19 +59,22 @@ class IngestPipeline:
         updated_pages = []
 
         page_content = self._build_summary_content(raw_path, content, mentioned_pages)
-        self._save_summary_page(summary_title, category, page_content)
+        new_entry = self._save_summary_page(summary_title, category, page_content)
         created_pages.append(summary_title)
 
-        # 6. 检测矛盾（简化版：检查是否有冲突的实体）
+        # 6. 更新 index.md
+        self._update_index(new_entry)
+
+        # 7. 检测矛盾（简化版：检查是否有冲突的实体）
         contradictions = self._check_contradictions(mentioned_pages)
 
-        # 7. 维护交叉引用
+        # 8. 维护交叉引用
         cross_ref_fixes = self._fix_cross_references(summary_title, mentioned_pages)
 
-        # 8. 更新 lifecycle
+        # 9. 更新 lifecycle
         self.wiki_kb.update_access(summary_title)
 
-        # 9. 记录 log
+        # 10. 记录 log
         log_entry = self._create_log_entry(raw_path, created_pages, updated_pages)
         self.wiki_kb.append_log(log_entry)
 
@@ -127,7 +130,7 @@ class IngestPipeline:
 
         return "\n".join(lines)
 
-    def _save_summary_page(self, title: str, category: str, content: str) -> None:
+    def _save_summary_page(self, title: str, category: str, content: str):
         """保存 summary 页面到 wiki"""
         from artifact_chain.src.wiki_kb import WikiEntry
 
@@ -178,6 +181,83 @@ class IngestPipeline:
         # 更新内存索引
         self.wiki_kb.entries.append(entry)
         self.wiki_kb._index[title] = entry
+
+        return entry
+
+    def _update_index(self, new_entry) -> None:
+        """更新 index.md 文件"""
+        index_path = self.wiki_kb.wiki_dir / "index.md"
+
+        # 读取现有 index 内容
+        if index_path.exists():
+            with open(index_path, 'r', encoding='utf-8') as f:
+                index_content = f.read()
+        else:
+            index_content = "# Wiki Index\n\n> Last updated: \n\n## Entities\n\n| Page | Summary | confidence | status |\n|------|---------|------------|--------|\n\n## Concepts\n\n| Page | Summary | confidence | status |\n|------|---------|------------|--------|\n\n## Summaries\n\n| Page | Summary | confidence | status |\n|------|---------|------------|--------|\n\n## Comparisons\n\n| Page | Summary | confidence | status |\n|------|---------|------------|--------|\n\n## Synthesis\n\n| Page | Summary | confidence | status |\n|------|---------|------------|--------|\n"
+
+        # 找到对应的 category 表格并添加新行
+        category_map = {
+            "entities": "Entities",
+            "concepts": "Concepts",
+            "summaries": "Summaries",
+            "comparisons": "Comparisons",
+            "synthesis": "Synthesis",
+        }
+
+        category_name = category_map.get(new_entry.category, "")
+        if not category_name:
+            return
+
+        # 构建新行
+        new_row = f"| [[{new_entry.title}]] | {new_entry.description} | {new_entry.confidence} | {new_entry.status} |\n"
+
+        # 在对应 category 下添加（简单处理：追加到表格末尾）
+        # 更完善的实现需要解析 markdown 表格
+        lines = index_content.split('\n')
+
+        # 找到 category 标题所在的行
+        category_line_idx = -1
+        for i, line in enumerate(lines):
+            if line.strip() == f"## {category_name}":
+                category_line_idx = i
+                break
+
+        if category_line_idx >= 0:
+            # 找到下一个 ## 标题或文件末尾
+            insert_idx = len(lines)
+            for i in range(category_line_idx + 1, len(lines)):
+                if lines[i].startswith("## "):
+                    insert_idx = i
+                    break
+
+            # 在表格末尾添加新行（在 |---- 之后）
+            # 找到最近的 |---- 行
+            table_end_idx = category_line_idx + 1
+            while table_end_idx < insert_idx and not lines[table_end_idx].strip().startswith("|---"):
+                table_end_idx += 1
+
+            if table_end_idx < insert_idx:
+                # 在 |---- 行之后插入新行
+                lines.insert(table_end_idx + 1, new_row.rstrip())
+
+            # 更新 total count
+            total_match = [l for l in lines if "Total pages:" in l]
+            if total_match:
+                idx = lines.index(total_match[0])
+                import re
+                match = re.search(r'Total pages: (\d+)', lines[idx])
+                if match:
+                    count = int(match.group(1)) + 1
+                    lines[idx] = re.sub(r'Total pages: \d+', f'Total pages: {count}', lines[idx])
+
+            # 更新时间戳
+            for i, line in enumerate(lines):
+                if line.startswith("> Last updated:"):
+                    lines[i] = f"> Last updated: {datetime.now().strftime('%Y-%m-%d')}"
+                    break
+
+            with open(index_path, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(lines))
 
     def _check_contradictions(self, mentioned: List[str]) -> List[dict]:
         """检测矛盾（简化版）"""

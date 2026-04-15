@@ -1,6 +1,6 @@
 # Wiki Index
 
-> Last updated: 2026-04-15 | Total pages: 14 | Total materials: 6
+> Last updated: 2026-04-15
 
 ## Entities
 
@@ -27,6 +27,7 @@
 
 | Page | Summary | confidence | status |
 |------|---------|------------|--------|
+| [[raw-articles-长城历史沿革]] | 从原材料消化: raw-articles-长城历史沿革 | 0.5 | active |
 | [[raw-articles-三星堆综合研究]] | 三星堆遗址与青铜面具综合研究摘要 | 0.75 | active |
 
 ## Comparisons
