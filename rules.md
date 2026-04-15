@@ -65,6 +65,13 @@ LLM 综合已有知识回答问题
 ## 文件位置规范
 
 ```
+raw/
+├── articles/      # 网络文章、博客
+├── papers/        # 学术论文
+├── docs/          # 官方文档摘录
+├── transcripts/    # 会议记录、演讲稿
+└── assets/        # 图片、图表、数据文件
+
 wiki/
 ├── index.md              # 全局索引（表格格式）
 ├── log.md                # 操作日志
@@ -90,6 +97,14 @@ wiki/
 3. **自动记录 log.md**
    - Ingest/Query/Lint/Publish 四个操作都必须调用 append_log()
    - 格式：`## [YYYY-MM-DD] ingest | file\n- Created: [[page]]\n- Updated: [[page]]`
+
+## 晋升规则
+
+| 方向 | 条件 |
+|------|------|
+| summaries → entities/concepts | 实体/概念被 2+ 素材提及 |
+| entities/concepts → comparisons/synthesis | 3+ 个形成可比主题或模式 |
+| synthesis confidence >= 0.85 | 建议 publish 为成品 |
 
 ## Pipeline 操作通用模式
 
