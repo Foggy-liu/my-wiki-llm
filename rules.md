@@ -31,7 +31,7 @@
 title: 页面标题
 aliases: [别名1, 别名2]
 tags: [标签1, 标签2]
-category: entities | concepts | summaries | comparisons | synthesis
+category: entities | concepts | constraints | summaries | comparisons | synthesis
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 sources:
@@ -76,10 +76,11 @@ wiki/
 ├── index.md              # 全局索引（表格格式）
 ├── log.md                # 操作日志
 ├── lifecycle.md          # [可选] 生命周期数据
-├── entities/             # 实体页面
-├── concepts/             # 概念页面
-├── summaries/             # 材料摘要
-├── comparisons/           # 对比分析
+├── entities/             # 实体（客观存在的事物）
+├── concepts/             # 概念/方法论（知识）
+├── constraints/          # 约束/规则（用户定义）
+├── summaries/            # 材料摘要
+├── comparisons/          # 对比分析
 └── synthesis/            # 综合洞察
 ```
 
