@@ -132,3 +132,83 @@ access_count: 0        # 访问次数，用于晋升规则
 - Lint 负责检测：孤立页面、矛盾、交叉引用完整性、生命周期衰减
 - Lint 不负责修复：修复是 Ingest 的职责
 - Error 级别问题应该在 Ingest 阶段就被消除
+
+## raw/ 变更边界情况处理
+
+### 读写分离原则
+
+- **Query 不读取 raw/** — Query 读取的是 Wiki 页面，不是 raw 文件
+- raw 变化先入队（pending/），定时批量同步到 Wiki
+- Query 使用版本快照，Query 开始时锁定版本号，整个过程不受后续更新影响
+
+### raw/ 文件删除
+
+```
+检测到源文件被删除
+        ↓
+处理方式：
+  - 唯一来源 → confidence −0.30，status → stale，标注 "⚠️ 源文件已不存在"
+  - 多个来源之一 → 重新评估置信度，更新 sources 列表
+        ↓
+更新 index.md
+        ↓
+记录 log.md
+```
+
+### raw/ 文件移动/重命名
+
+```
+检测到路径变化
+        ↓
+自动更新所有引用：
+  - [[raw/old-path/file]] → [[raw/new-path/file]]
+  - frontmatter sources 列表同步
+        ↓
+更新 index.md
+        ↓
+记录 log.md
+```
+
+### raw/ 文件内容修改
+
+```
+检测到修改时间（mtime）变化
+        ↓
+内容有实质性变化：
+  - 引用页面标记 needs-review
+  - 置信度暂时 −0.20
+  - 状态 → stale
+  - 通知用户重新 Ingest
+        ↓
+记录 log.md
+```
+
+### 变化队列结构
+
+```
+raw_changes/
+├── pending/
+│   ├── added/         # 新增文件
+│   ├── deleted/       # 删除文件
+│   └── modified/      # 修改文件
+└── lock.json         # 同步锁，防止并发同步
+```
+
+### 版本机制
+
+```yaml
+# wiki/.version
+version: 42
+last_sync: "2026-04-16T10:30:00Z"
+next_sync: "2026-04-16T10:35:00Z"
+```
+
+### Query 版本锁定流程
+
+```
+用户发起 Query → 记录当前版本号（v42）
+        ↓
+整个 Query 使用 v42 的 index.md 和 Wiki 页面
+        ↓
+Query 期间 Wiki 更新（v42 → v43）不影响 Query A
+```

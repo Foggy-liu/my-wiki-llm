@@ -61,15 +61,15 @@ LLM 综合已有知识回答问题
 
 ## 二、核心原则（必须遵守）
 
-### 2.1 六大原则
+### 2.1 四条核心原则（以 rules.md 为准）
+
+> llm-wiki.md 原文未明确定义"原则"数量，以下四条是根据 rules.md 和 llm-wiki.md 核心思想整合而来。
 
 ```
 1. Raw is Immutable      — raw/ 下的文件永远不要修改
 2. Wiki is Compiled      — Wiki 内容可以从 raw 重新生成
-3. Compound Interest     — 每次操作都让 Wiki 更有价值
-4. Cross-references First — [[wikilinks]] 是 Wiki 最大的价值
-5. Contradictions Transparent — 矛盾要显式标注来源
-6. Complete Logging     — 所有操作都要记录到 log.md
+3. Cross-references First — [[wikilinks]] 是 Wiki 最大的价值
+4. Complete Logging     — 所有操作都要记录到 log.md
 ```
 
 ### 2.2 为什么这些原则重要？
@@ -77,31 +77,26 @@ LLM 综合已有知识回答问题
 - **Raw 不可修改**：保证知识有唯一的真实来源，Wiki 出错时可以重建
 - **Wiki 是编译产物**：知识被提炼过，比原始文档更结构化、更易用
 - **交叉引用是网络**：知识节点互相连接，形成知识图谱，而非孤立散落
-- **矛盾透明**：不掩盖矛盾，让使用者自己判断置信度
+- **完整日志**：所有操作可追溯，Wiki 演化历史清晰
 
 ---
 
 ## 三、架构详解
 
-### 3.1 五层架构
+### 3.1 三层架构（以 llm-wiki.md 为准）
+
+> llm-wiki.md 原文明确说"There are three layers"，以下为原文定义。Skills 层和 Output 层是开发指南的扩展，非核心架构。
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Schema 层（CLAUDE.md / AGENTS.md）                          │
+│  Schema（CLAUDE.md / AGENTS.md）                              │
 │  规则手册 —— 告诉 LLM 如何维护 Wiki                          │
 │  人类和 LLM 共同演进                                        │
 └─────────────────────────────────────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Skills 层（skills/llm-wiki/）                              │
-│  技能定义 —— ingest/query/lint/publish 的详细流程           │
-│  按需加载，不占用日常上下文                                   │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Raw 层（raw/）                                             │
+│  Raw Sources（raw/）                                         │
 │  原始资料 —— 人类整理，LLM 只读                              │
 │  这是知识的真实来源，永不修改                                 │
 │                                                             │
@@ -116,7 +111,7 @@ LLM 综合已有知识回答问题
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Wiki 层（wiki/）                                            │
+│  Wiki（wiki/）                                               │
 │  LLM 编译的产物 —— LLM 可读写，人类只读                       │
 │                                                             │
 │  wiki/index.md      — 全局索引（包含置信度和状态）            │
@@ -128,21 +123,11 @@ LLM 综合已有知识回答问题
 │  wiki/comparisons/  — 对比分析页面                          │
 │  wiki/synthesis/    — 综合洞察页面                          │
 └─────────────────────────────────────────────────────────────┘
-                            │
-                         LLM 发布
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Output 层（output/）                                       │
-│  精炼的交付物 —— LLM 生成，人类审核定稿                       │
-│                                                             │
-│  output/posts/      — 博客文章                               │
-│  output/reports/    — 研究报告                               │
-│  output/slides/     — 演示文稿（Marp 格式）                  │
-│  output/tutorials/  — 教程                                 │
-│  output/newsletters/— 知识简报                               │
-└─────────────────────────────────────────────────────────────┘
 ```
+
+**可选扩展（非核心架构）：**
+- **Skills 层**：技能定义目录，按需加载，非必需
+- **Output 层**：交付物输出目录，Publish 操作的产物，非核心 Wiki 的一部分
 
 ### 3.2 Wiki 页面的标准格式
 
@@ -181,9 +166,9 @@ status: active | stale | archived # 可选（lifecycle.md 存在时必须有）
 
 ## Entities
 
-| Page | Summary | confidence | status |
-|------|---------|------------|--------|
-| [[Obsidian]] | Local markdown-based knowledge management tool | 0.70 | active |
+| Page | Summary | Confidence | Status | Updated | Description |
+|------|---------|------------|--------|---------|-------------|
+| [[Obsidian]] | Local markdown-based knowledge management tool | 0.70 | active | 2026-04-15 | Obsidian 官方 |
 
 ## Concepts
 (same table format)
@@ -200,8 +185,9 @@ status: active | stale | archived # 可选（lifecycle.md 存在时必须有）
 
 **关键点：**
 - 使用**表格格式**（不是列表）
-- 必须包含 `Summary`、`confidence` 和 `status` 列
+- 必须包含 `Summary`、`Confidence`、`Status`、`Updated`、`Description` 五列
 - `Summary` 列填写页面的一句话描述
+- `Confidence` 和 `Status` 在 lifecycle.md 存在时必须，Updated 和 Description 推荐添加
 - LLM 读取 index.md 来定位相关页面，而不是直接遍历所有文件
 
 ### 3.4 log.md 的正确格式
@@ -397,8 +383,12 @@ active ──→ stale ──→ archived
    - Entity → wiki/entities/
    - Concept → wiki/concepts/
 5. 处理矛盾：新材料与现有内容矛盾 → 显式标注，引用双方来源
-6. 维护交叉引用：[[wikilinks]] 连接相关页面
-7. 生命周期评估：
+6. 【经验规则】自动创建缺失引用：
+   - 如果提取到 [[wikilink]] 但页面不存在，自动创建占位页面
+   - 占位页面 confidence=0.1，标签包含 auto-created
+   - 不要留给人修补，不要等 Lint 事后发现
+7. 维护交叉引用：[[wikilinks]] 连接相关页面
+8. 生命周期评估：
    - 新页面：设置初始置信度
    - 现有页面被新来源确认：置信度 +0.10
    - 检查晋升：实体/概念被 2+ 材料提到 → 创建对应页面
@@ -425,7 +415,14 @@ active ──→ stale ──→ archived
    - 晋升建议：满足晋升条件但尚未晋升的页面
    - 过期交付物：依赖的页面已 stale/archived → 标记为过期
 
-3. 日志归档：30 天前的记录 → wiki/log-archive/YYYY-MM.md
+3. raw/ 同步检查：
+   - 检测 orphan sources：源文件已删除但 Wiki 仍引用
+   - 检测 moved sources：源文件路径已变化
+   - 检测 modified sources：源文件内容已修改
+   - 自动更新受影响的 Wiki 页面
+   - 更新 index.md 和 lifecycle.md
+
+4. 日志归档：30 天前的记录 → wiki/log-archive/YYYY-MM.md
 
 4. 生成修复列表：输出问题清单，用户确认后执行修复
 
@@ -716,14 +713,209 @@ A: 有用，但应用方式不同。传统 RAG 在原始文档碎片上做向量
 
 ---
 
-## 十、下一步行动
+## 十一、raw/ 变更的边界情况处理
+
+> 本节补充 raw/ 中文件被删除、移动、内容修改时的 Wiki 响应机制，以及读写分离设计。
+
+### 11.1 场景一：文件被删除
+
+```
+源文件从 raw/ 中删除
+        ↓
+Wiki 检测到引用断开（通过 lint 或定期检查）
+        ↓
+处理方式：
+  - 如果该 source 是页面的唯一来源：
+    → 页面置信度 −0.30
+    → 状态 → stale
+    → 在页面内标注："⚠️ 源文件已不存在，内容待验证"
+  - 如果该 source 是多个来源之一：
+    → 重新评估页面置信度（基于剩余来源数量）
+    → 更新 frontmatter 中的 sources 列表
+        ↓
+更新 index.md（如果页面状态变化）
+        ↓
+记录到 log.md：
+  ## [2026-04-16] source-removed | raw/papers/xxx.pdf
+  - Removed: [[页面名]] (confidence -0.30, now stale)
+  - Reason: 源文件已从 raw/ 删除
+```
+
+### 11.2 场景二：文件被移动/重命名
+
+```
+源文件从 raw/old-path/ 移动到 raw/new-path/
+        ↓
+Wiki 检测到路径变化
+        ↓
+自动更新所有引用：
+  - [[raw/old-path/file]] → [[raw/new-path/file]]
+  - frontmatter 中的 sources 列表同步更新
+  - 如果有页面引用了这个路径，同步更新
+        ↓
+更新 index.md（时间戳）
+        ↓
+记录到 log.md：
+  ## [2026-04-16] source-moved | raw/papers/xxx.pdf
+  - Updated: [[页面1]], [[页面2]]
+  - Path: raw/old-path/ → raw/new-path/
+```
+
+### 11.3 场景三：文件内容大幅修改
+
+```
+检测到源文件修改时间变化（mtime）
+        ↓
+对比文件 hash 或修改时间
+        ↓
+如果内容有实质性变化：
+  - 该 source 的所有引用页面标记为 needs-review
+  - 置信度暂时 −0.20（待重新验证后恢复）
+  - 状态 → stale
+  - 通知用户需要重新 Ingest
+        ↓
+记录到 log.md：
+  ## [2026-04-16] source-modified | raw/papers/xxx.pdf
+  - Flagged for review: [[页面1]], [[页面2]]
+  - Action required: 重新 Ingest 以验证内容
+```
+
+### 11.4 场景四：源文件删除后用户提问（读写分离设计）
+
+#### 核心问题
+
+raw 文件被删除后，Wiki 页面可能还未被 Lint 检测到（存在时间差），此时用户发起 Query，如何处理？
+
+#### 设计原则：Query 不读取 raw/
+
+**Query 时不读取 raw/** — raw 是 source of truth，但 Query 读取的是 **Wiki 页面**（由 raw 编译而来）。如果 raw 文件被删除，**index.md 应该已经被更新**，Query 读到的是"已更新"的状态。
+
+#### 读写分离 + 版本快照机制
+
+```
+┌─────────────────────────────────────────────────────┐
+│  raw/ 变化（用户修改）                              │
+│  → 写入变化队列（pending/，不立刻更新 wiki）          │
+└─────────────────────────────────────────────────────┘
+                       │
+                       │ 定时同步（每 N 分钟）
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│  Wiki 更新（批量应用变化队列）                       │
+│  → 更新 index.md、Wiki 页面                         │
+│  → 版本号 +1                                        │
+└─────────────────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│  Query 读取的是"版本快照"                            │
+│  → Query 开始时记录当前版本号                        │
+│  → 整个 Query 过程使用该版本，不受后续更新影响       │
+└─────────────────────────────────────────────────────┘
+```
+
+#### 变化队列结构
+
+```
+raw_changes/
+├── pending/           # 待处理的变更
+│   ├── added/         # 新增文件
+│   ├── deleted/       # 删除文件
+│   └── modified/      # 修改文件
+└── lock.json         # 同步锁（防止并发同步）
+```
+
+#### 版本机制
+
+```yaml
+# wiki/.version
+{
+  "version": 42,
+  "last_sync": "2026-04-16T10:30:00Z",
+  "next_sync": "2026-04-16T10:35:00Z"
+}
+```
+
+#### Query 的版本锁定流程
+
+```
+用户发起 Query
+        ↓
+记录当前 wiki 版本号（例如 v42）
+        ↓
+整个 Query 使用 v42 的 index.md 和 Wiki 页面
+        ↓
+Query 结束（版本号在 Query 期间变化不影响）
+```
+
+#### 边界情况处理
+
+| 情况 | 处理方式 |
+|------|----------|
+| Query 进行中，Wiki 更新完毕 | Query A 继续使用锁定的 v42，不受影响 |
+| Query 进行中，raw 又发生变化 | 新变化等待下一次同步，不打断 Query |
+| 同步期间有新的 raw 变化 | 新变化进入 pending/，等待下次同步 |
+| 同步期间再次触发同步 | 使用 lock.json 锁文件防止并发 |
+
+#### Lint 在同步中的角色
+
+```
+定时同步触发
+        ↓
+Lint 检查项（新增）：
+  □ 检测 orphan sources：被 index.md 引用但 raw/ 中不存在的文件
+  □ 检测 moved sources：路径发生变化的文件
+  □ 检测 modified sources：修改时间变化且内容可能不同的文件
+        ↓
+应用变化到 Wiki
+        ↓
+更新版本号
+```
+
+### 11.5 Lint 职责扩展
+
+Lint 负责检测以下问题并触发修复：
+
+```
+1. 结构性检查：
+   - 矛盾检测：页面间的矛盾声明
+   - 孤立页面：无入站链接的页面（index.md 链接不算）
+   - 缺失页面：被多个 [[wikilinks]] 引用但尚未创建的页面
+   - 交叉引用：相关页面之间的双向链接
+   - Frontmatter：必填字段完整性
+
+2. 生命周期检查（如果 lifecycle.md 存在）：
+   - 时间衰减：计算置信度衰减，更新 index.md 和 lifecycle.md
+   - 状态流转：active → stale → archived
+   - 降级检查：synthesis 核心结论被推翻 → 降级
+   - 晋升建议：满足晋升条件但尚未晋升的页面
+   - 过期交付物：依赖的页面已 stale/archived → 标记为过期
+
+3. raw/ 同步检查：
+   - 检测 orphan sources：源文件已删除但 Wiki 仍引用
+   - 检测 moved sources：源文件路径已变化
+   - 检测 modified sources：源文件内容已修改
+   - 自动更新受影响的 Wiki 页面
+   - 更新 index.md 和 lifecycle.md
+
+4. 日志归档：30 天前的记录 → wiki/log-archive/YYYY-MM.md
+
+5. 生成修复列表：输出问题清单，用户确认后执行修复
+
+6. 记录日志
+```
+
+---
+
+## 十二、下一步行动
 
 1. ✅ 理解 LLM Wiki 核心理论（Query 是 LLM 辅助的，不是关键字匹配）
 2. ⬜ 构建项目的 Raw 层（放入原始资料）
 3. ⬜ 使用 Ingest 消化第一批材料
 4. ⬜ 体验 Query 操作
-5. ⬜ 定期 Lint 检查 Wiki 健康状态
+5. ⬜ 定期 Lint 检查 Wiki 健康状态（包括 raw/ 同步检查）
 6. ⬜ 使用 Publish 生成第一个交付物
+7. ⬜ 实现读写分离 + 版本快照机制（见 11.4 节）
 
 ---
 
