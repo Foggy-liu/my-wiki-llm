@@ -129,20 +129,16 @@ status: active
                     WikiPage.file_path == str(page_path)
                 ).first()
 
-                if page:
-                    self.update_wiki_page(page, content, sources)
-                    result["links_updated"].append(title)
-                else:
-                    page_content = f"""---
+                page_content = f"""---
 title: {title}
 category: {category}
 created: {datetime.now().strftime('%Y-%m-%d')}
 updated: {datetime.now().strftime('%Y-%m-%d')}
 sources:
 """
-                    for s in sources:
-                        page_content += f"  - \"[[{s}]]\"\n"
-                    page_content += f"""description: {description}
+                for s in sources:
+                    page_content += f"  - \"[[{s}]]\"\n"
+                page_content += f"""description: {description}
 confidence: 0.75
 status: active
 ---
@@ -150,15 +146,16 @@ status: active
 ## {title}
 
 """
-                    for key, value in properties.items():
-                        page_content += f"- **{key}:** {value}\n"
+                for key, value in properties.items():
+                    page_content += f"- **{key}:** {value}\n"
 
-                    page_content += f"\n## 来源\n"
-                    for s in sources:
-                        page_content += f"- [[{s}]]\n"
+                page_content += f"\n## 来源\n"
+                for s in sources:
+                    page_content += f"- [[{s}]]\n"
 
-                    page_path.write_text(page_content, encoding='utf-8')
+                page_path.write_text(page_content, encoding='utf-8')
 
+                if not page:
                     db_page = WikiPage(
                         title=title,
                         category=category,
@@ -169,6 +166,10 @@ status: active
                     self.db.add(db_page)
                     self.db.commit()
                     result["entities_created"].append(title)
+                else:
+                    page.updated_at = datetime.utcnow()
+                    self.db.commit()
+                    result["links_updated"].append(title)
 
             await self._update_index()
             self._log_operation("ingest", "success", result)

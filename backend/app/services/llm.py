@@ -3,12 +3,12 @@ from typing import List, Dict, Any
 from app.config import settings
 
 class LLMService:
-    """MiniMax LLM Service wrapper - supports both OpenAI and Anthropic compatible APIs"""
+    """LLM Service wrapper - supports OpenAI and Anthropic compatible APIs"""
 
     def __init__(self):
-        self.api_key = settings.MINIMAX_API_KEY
-        self.base_url = settings.MINIMAX_BASE_URL.rstrip("/")
-        self.model = settings.MINIMAX_MODEL
+        self.api_key = settings.LLM_API_KEY
+        self.base_url = settings.LLM_BASE_URL.rstrip("/")
+        self.model = settings.LLM_MODEL
         # Detect API format from base URL
         if "anthropic" in self.base_url:
             self.api_mode = "anthropic"
@@ -22,7 +22,7 @@ class LLMService:
         max_tokens: int = 2048
     ) -> str:
         if not self.api_key:
-            raise ValueError("MINIMAX_API_KEY not configured")
+            raise ValueError("LLM_API_KEY not configured")
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -47,7 +47,7 @@ class LLMService:
                 "temperature": temperature
             }
 
-            endpoint = f"{self.base_url}/v1/messages"
+            endpoint = f"{self.base_url}/messages"
         else:
             # OpenAI compatible API (/v1/chat/completions)
             payload = {
@@ -57,7 +57,7 @@ class LLMService:
                 "max_tokens": max_tokens
             }
 
-            endpoint = f"{self.base_url}/text/chatcompletion_v2"
+            endpoint = f"{self.base_url}/chat/completions"
 
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(endpoint, headers=headers, json=payload)
@@ -65,7 +65,10 @@ class LLMService:
             data = response.json()
 
             if self.api_mode == "anthropic":
-                return data["content"][0]["text"]
+                for block in data["content"]:
+                    if block.get("type") == "text":
+                        return block["text"]
+                return data["content"][0].get("text", "")
             else:
                 return data["choices"][0]["message"]["content"]
 

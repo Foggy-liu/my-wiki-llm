@@ -21,10 +21,10 @@ class Settings(BaseSettings):
     RAW_DIR: Path = WIKI_ROOT / "raw"
     WIKI_DIR: Path = WIKI_ROOT / "wiki"
 
-    # MiniMax LLM
-    MINIMAX_API_KEY: str = ""
-    MINIMAX_BASE_URL: str = "https://api.minimax.chat/v1"
-    MINIMAX_MODEL: str = "abab6.5s-chat"
+    # LLM (DashScope / 通义千问)
+    LLM_API_KEY: str = ""
+    LLM_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    LLM_MODEL: str = "qwen3.5-plus"
 
     class Config:
         env_file = PROJECT_ROOT / ".env"
