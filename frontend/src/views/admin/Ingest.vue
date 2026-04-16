@@ -118,13 +118,20 @@ async function handleUpload() {
 
   uploading.value = true
   uploadMessage.value = ''
+  ingestResults.value = []
 
   try {
+    // 1. 上传文件到 raw 目录
     await wikiStore.uploadFile(selectedFile.value, uploadCategory.value)
     uploadMessage.value = '文件上传成功'
     uploadSuccess.value = true
     selectedFile.value = null
+
+    // 2. 自动触发 Ingest 处理（不阻断上传成功提示）
     await refreshStatus()
+    if (pendingFiles.value.length > 0) {
+      await handleIngest()
+    }
   } catch (e) {
     uploadMessage.value = e.response?.data?.detail || '上传失败'
     uploadSuccess.value = false
@@ -143,6 +150,12 @@ async function handleIngest() {
     await refreshStatus()
   } catch (e) {
     console.error(e)
+    ingestResults.value = [{
+      file: 'inggest',
+      status: 'failed',
+      entities_created: [],
+      error: e.response?.data?.detail || e.message || '触发失败，请检查 API 配置'
+    }]
   } finally {
     ingesting.value = false
   }
