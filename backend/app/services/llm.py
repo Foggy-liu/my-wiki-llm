@@ -1,14 +1,19 @@
 import httpx
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 from app.config import settings
 
 class LLMService:
-    """MiniMax LLM Service wrapper"""
+    """MiniMax LLM Service wrapper - supports both OpenAI and Anthropic compatible APIs"""
 
     def __init__(self):
         self.api_key = settings.MINIMAX_API_KEY
-        self.base_url = settings.MINIMAX_BASE_URL
+        self.base_url = settings.MINIMAX_BASE_URL.rstrip("/")
         self.model = settings.MINIMAX_MODEL
+        # Detect API format from base URL
+        if "anthropic" in self.base_url:
+            self.api_mode = "anthropic"
+        else:
+            self.api_mode = "openai"
 
     async def chat(
         self,
@@ -24,22 +29,45 @@ class LLMService:
             "Content-Type": "application/json"
         }
 
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }
+        if self.api_mode == "anthropic":
+            # Anthropic compatible API (/v1/messages)
+            anthropic_messages = []
+            for msg in messages:
+                role = msg["role"]
+                if role == "system":
+                    anthropic_messages.insert(0, {"role": "user", "content": msg["content"]})
+                    anthropic_messages.insert(1, {"role": "assistant", "content": "OK"})
+                else:
+                    anthropic_messages.append({"role": role, "content": msg["content"]})
+
+            payload = {
+                "model": self.model,
+                "messages": anthropic_messages,
+                "max_tokens": max_tokens,
+                "temperature": temperature
+            }
+
+            endpoint = f"{self.base_url}/v1/messages"
+        else:
+            # OpenAI compatible API (/v1/chat/completions)
+            payload = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+
+            endpoint = f"{self.base_url}/text/chatcompletion_v2"
 
         async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(
-                f"{self.base_url}/text/chatcompletion_v2",
-                headers=headers,
-                json=payload
-            )
+            response = await client.post(endpoint, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"]
+
+            if self.api_mode == "anthropic":
+                return data["content"][0]["text"]
+            else:
+                return data["choices"][0]["message"]["content"]
 
     async def extract_entities(self, content: str) -> List[Dict[str, Any]]:
         prompt = f"""从以下文档中提取实体信息。返回 JSON 数组格式：
