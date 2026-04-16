@@ -5,6 +5,7 @@ from app.config import settings
 from app.db import Base, engine
 from app.api.auth import router as auth_router
 from app.api.ingest import router as ingest_router
+from app.api.query import router as query_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -27,6 +28,7 @@ def on_startup():
 
 app.include_router(auth_router)
 app.include_router(ingest_router)
+app.include_router(query_router)
 
 @app.get("/")
 async def root():
