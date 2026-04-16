@@ -56,6 +56,18 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
+  // Wait for auth store to finish initializing
+  if (!authStore.isReady) {
+    await new Promise(resolve => {
+      const unwatch = setInterval(() => {
+        if (authStore.isReady) {
+          clearInterval(unwatch)
+          resolve()
+        }
+      }, 50)
+    })
+  }
+
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
     next('/login')
   } else if (to.meta.requiresAdmin && !authStore.isAdmin) {

@@ -5,6 +5,7 @@ import { authAPI } from '@/api/auth'
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const token = ref(localStorage.getItem('token') || null)
+  const isReady = ref(false)
 
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
@@ -29,18 +30,23 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = response.data
     } catch (e) {
       logout()
+    } finally {
+      isReady.value = true
     }
   }
 
   function logout() {
     user.value = null
     token.value = null
+    isReady.value = false
     localStorage.removeItem('token')
   }
 
   if (token.value) {
     fetchUser()
+  } else {
+    isReady.value = true
   }
 
-  return { user, token, isLoggedIn, isAdmin, login, register, logout, fetchUser }
+  return { user, token, isReady, isLoggedIn, isAdmin, login, register, logout, fetchUser }
 })
